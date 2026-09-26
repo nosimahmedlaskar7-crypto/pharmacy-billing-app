@@ -135,7 +135,7 @@ document.getElementById("purchase").value="";
 
 showMedicines();
 updateMedicineSelect();
-
+showAlerts();
 alert("Medicine added successfully!");
 }
 
@@ -192,7 +192,7 @@ Delete
 });
 }
 
-function updateMedicineSelect(){
+function updateMedicineSelect(){box.innerHTML
 
 let select=document.getElementById("billMedicine");
 
@@ -270,7 +270,8 @@ cart=cart.filter(item=>item.id!==id);
 showCart();
 }
 
-function showCart(){
+function showCart(){<div class="card">
+<h2>📊 Sales Summary</h2>
 
 let box=document.getElementById("cart");
 
@@ -282,4 +283,7 @@ if(cart.length===0){
 box.innerHTML="<p>No items in bill.</p>";
 }
 
-cart.forEach(item=>{
+cart.forEach(item=>{<div class="card">
+<h2>⚠️ Alerts</h2>
+<div id="alerts"></div>
+</div>

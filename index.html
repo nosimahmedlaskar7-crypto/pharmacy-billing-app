@@ -3,74 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PharmaStock</title>
+<title>PharmaStock - Pharmacy Billing</title>
 
 <style>
-*{
-  box-sizing:border-box;
-  font-family:Arial,sans-serif;
-}
-body{
-  margin:0;
-  background:#f4f7f9;
-  color:#222;
-}
-header{
-  background:#087f5b;
-  color:white;
-  padding:18px;
-  text-align:center;
-}
-header h1{
-  margin:0;
-}
-.container{
-  padding:15px;
-  max-width:700px;
-  margin:auto;
-}
-.card{
-  background:white;
-  padding:16px;
-  margin-bottom:15px;
-  border-radius:12px;
-  box-shadow:0 2px 8px #0001;
-}
-input,button{
-  width:100%;
-  padding:12px;
-  margin:6px 0;
-  border-radius:8px;
-  border:1px solid #ccc;
-  font-size:16px;
-}
-button{
-  background:#087f5b;
-  color:white;
-  border:0;
-  font-weight:bold;
-}
-button.delete{
-  background:#d63031;
-}
-.medicine{
-  border:1px solid #ddd;
-  padding:12px;
-  border-radius:10px;
-  margin-top:10px;
-}
-.price{
-  color:#087f5b;
-  font-weight:bold;
-}
+*{box-sizing:border-box;font-family:Arial,sans-serif}
+body{margin:0;background:#f4f7f9;color:#222}
+header{background:#087f5b;color:white;padding:18px;text-align:center}
+header h1{margin:0}
+.container{max-width:800px;margin:auto;padding:15px}
+.card{background:white;padding:16px;margin-bottom:15px;border-radius:12px;box-shadow:0 2px 8px #0001}
+input,select,button{width:100%;padding:12px;margin:6px 0;border-radius:8px;border:1px solid #ccc;font-size:16px}
+button{background:#087f5b;color:white;border:0;font-weight:bold}
+button.red{background:#d63031}
+button.blue{background:#1976d2}
+.medicine,.cart-item{border:1px solid #ddd;padding:12px;border-radius:10px;margin-top:10px}
+.price{color:#087f5b;font-weight:bold}
+.total{font-size:22px;font-weight:bold;text-align:right;margin-top:15px}
+.small{color:#666;font-size:13px}
+.badge{display:inline-block;padding:5px 8px;border-radius:6px;background:#eee;margin-top:5px}
 </style>
 </head>
 
 <body>
 
 <header>
-  <h1>💊 PharmaStock</h1>
-  <p>Inventory & Billing</p>
+<h1>💊 PharmaStock</h1>
+<p>Pharmacy Inventory & Billing</p>
 </header>
 
 <div class="container">
@@ -78,4 +36,250 @@ button.delete{
 <div class="card">
 <h2>➕ Add Medicine</h2>
 
-<input id="name" placeholder="Medicine name
+<input id="name" placeholder="Medicine name">
+<input id="batch" placeholder="Batch number">
+<input id="expiry" type="date">
+<input id="qty" type="number" placeholder="Quantity">
+<input id="mrp" type="number" placeholder="MRP">
+<input id="purchase" type="number" placeholder="Purchase price">
+
+<button onclick="addMedicine()">Add Medicine</button>
+</div>
+
+<div class="card">
+<h2>📦 Inventory</h2>
+
+<input id="search" oninput="showMedicines()" placeholder="🔎 Search medicine">
+
+<div id="inventory"></div>
+</div>
+
+<div class="card">
+<h2>🧾 Billing / POS</h2>
+
+<select id="billMedicine" onchange="updateBillPrice()">
+<option value="">Select medicine</option>
+</select>
+
+<input id="billQty" type="number" min="1" value="1" placeholder="Quantity">
+
+<button onclick="addToCart()">➕ Add to Bill</button>
+
+<div id="cart"></div>
+
+<div class="total">
+Total: ₹<span id="billTotal">0</span>
+</div>
+
+<button class="blue" onclick="completeSale()">✅ Complete Sale</button>
+</div>
+
+<div class="card">
+<h2>📊 Sales Summary</h2>
+<p>Total Sales: ₹<b id="salesTotal">0</b></p>
+<p>Total Bills: <b id="billCount">0</b></p>
+</div>
+
+</div>
+
+<script>
+
+let medicines =
+JSON.parse(localStorage.getItem("medicines")) || [];
+
+let cart = [];
+
+let sales =
+JSON.parse(localStorage.getItem("sales")) || [];
+
+function saveMedicines(){
+localStorage.setItem("medicines",JSON.stringify(medicines));
+}
+
+function saveSales(){
+localStorage.setItem("sales",JSON.stringify(sales));
+}
+
+function addMedicine(){
+
+let name=document.getElementById("name").value.trim();
+let batch=document.getElementById("batch").value.trim();
+let expiry=document.getElementById("expiry").value;
+let qty=Number(document.getElementById("qty").value);
+let mrp=Number(document.getElementById("mrp").value);
+let purchase=Number(document.getElementById("purchase").value);
+
+if(!name || !batch || !expiry || qty<=0 || mrp<=0){
+alert("Please fill all required details");
+return;
+}
+
+medicines.push({
+id:Date.now(),
+name:name,
+batch:batch,
+expiry:expiry,
+qty:qty,
+mrp:mrp,
+purchase:purchase
+});
+
+saveMedicines();
+
+document.getElementById("name").value="";
+document.getElementById("batch").value="";
+document.getElementById("expiry").value="";
+document.getElementById("qty").value="";
+document.getElementById("mrp").value="";
+document.getElementById("purchase").value="";
+
+showMedicines();
+updateMedicineSelect();
+
+alert("Medicine added successfully!");
+}
+
+function deleteMedicine(id){
+
+if(!confirm("Delete this medicine?")) return;
+
+medicines=medicines.filter(m=>m.id!==id);
+
+saveMedicines();
+showMedicines();
+updateMedicineSelect();
+}
+
+function showMedicines(){
+
+let search=document.getElementById("search").value.toLowerCase();
+let box=document.getElementById("inventory");
+
+box.innerHTML="";
+
+let filtered=medicines.filter(m =>
+m.name.toLowerCase().includes(search)
+);
+
+if(filtered.length===0){
+box.innerHTML="<p>No medicines found.</p>";
+return;
+}
+
+filtered.forEach(m=>{
+
+box.innerHTML+=`
+
+<div class="medicine">
+
+<h3>💊 ${m.name}</h3>
+
+<p>Batch: ${m.batch}</p>
+<p>Expiry: ${m.expiry}</p>
+<p>Stock: <b>${m.qty}</b></p>
+
+<p class="price">MRP: ₹${m.mrp}</p>
+
+<button class="red"
+onclick="deleteMedicine(${m.id})">
+Delete
+</button>
+
+</div>
+
+`;
+
+});
+}
+
+function updateMedicineSelect(){
+
+let select=document.getElementById("billMedicine");
+
+select.innerHTML='<option value="">Select medicine</option>';
+
+medicines.forEach(m=>{
+
+if(m.qty>0){
+
+select.innerHTML+=`
+
+<option value="${m.id}">
+${m.name} - ₹${m.mrp} - Stock ${m.qty}
+</option>
+
+`;
+
+}
+
+});
+}
+
+function updateBillPrice(){
+
+}
+
+function addToCart(){
+
+let id=Number(document.getElementById("billMedicine").value);
+let qty=Number(document.getElementById("billQty").value);
+
+if(!id || qty<=0){
+alert("Select medicine and quantity");
+return;
+}
+
+let medicine=medicines.find(m=>m.id===id);
+
+if(!medicine){
+alert("Medicine not found");
+return;
+}
+
+let existing=cart.find(item=>item.id===id);
+
+let currentQty=existing ? existing.qty : 0;
+
+if(currentQty+qty>medicine.qty){
+alert("Not enough stock!");
+return;
+}
+
+if(existing){
+existing.qty+=qty;
+}else{
+
+cart.push({
+id:medicine.id,
+name:medicine.name,
+price:medicine.mrp,
+qty:qty
+});
+
+}
+
+showCart();
+
+document.getElementById("billQty").value=1;
+}
+
+function removeFromCart(id){
+
+cart=cart.filter(item=>item.id!==id);
+
+showCart();
+}
+
+function showCart(){
+
+let box=document.getElementById("cart");
+
+box.innerHTML="";
+
+let total=0;
+
+if(cart.length===0){
+box.innerHTML="<p>No items in bill.</p>";
+}
+
+cart.forEach(item=>{
